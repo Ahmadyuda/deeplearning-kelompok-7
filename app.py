@@ -7,38 +7,35 @@ import io
 
 # --- Konfigurasi Global ---
 IMG_SIZE = (224, 224)
-MODEL_PATH = 'mobilenetv2_lettuce_best_finetuned.keras'
-CLASS_NAMES = ['Sehat', 'Sakit'] # Nama kelas dalam Bahasa Indonesia
+# GANTI NAMA FILE MODEL KARENA KONFLIK VERSI KERAS
+MODEL_PATH = 'mobilenetv2_legacy_h5.h5' 
+CLASS_NAMES = ['Sehat', 'Sakit'] 
 
 # --- Fungsi Pemuatan Model (Menggunakan Cache Streamlit) ---
-# @st.cache_resource memastikan model hanya dimuat sekali
 @st.cache_resource
 def load_my_model():
+    # SETELAN CPU: Memaksa TensorFlow hanya menggunakan CPU untuk menghindari error GPU di Docker
+    tf.config.set_visible_devices([], 'GPU')
+    
     try:
-        # Pemuatan dengan custom_objects untuk metrik
-        model = load_model(
-            MODEL_PATH, 
-            custom_objects={
-                'Precision': tf.keras.metrics.Precision, 
-                'Recall': tf.keras.metrics.Recall
-            }
-        )
+        # Pemuatan model H5 lama (lebih stabil)
+        # Format H5 lama umumnya tidak memerlukan custom_objects untuk metrik standar
+        model = load_model(MODEL_PATH) 
         return model
     except Exception as e:
-        st.error(f"Gagal memuat model: {e}")
+        st.error(f"Gagal memuat model: Pastikan file '{MODEL_PATH}' ada di root direktori. Error: {e}")
         st.stop()
 
 # --- Fungsi Preprocessing ---
 def preprocess_image(image):
-    # 1. Resize Gambar ke Ukuran Input Model (224x224)
+    # 1. Resize Gambar
     img = image.resize(IMG_SIZE)
     
-    # 2. Konversi ke Array NumPy dan tambahkan dimensi batch
+    # 2. Konversi ke Array NumPy (float32) dan tambahkan dimensi batch
     img_array = np.array(img, dtype=np.float32)
-    img_array = np.expand_dims(img_array, axis=0) # Shape: (1, 224, 224, 3)
+    img_array = np.expand_dims(img_array, axis=0) 
     
     # 3. Preprocessing MobileNetV2 (Rescaling ke [-1, 1])
-    # Menggunakan tf.cast karena input MobileNetV2 memerlukan float32
     processed_img = tf.keras.applications.mobilenet_v2.preprocess_input(img_array)
     
     return processed_img
@@ -55,11 +52,9 @@ def main():
     uploaded_file = st.file_uploader("Pilih gambar daun selada...", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
-        # Tampilkan gambar yang diunggah
         image = Image.open(uploaded_file).convert('RGB')
         st.image(image, caption='Gambar yang Diunggah.', use_column_width=True)
         
-        # Tombol Prediksi
         if st.button('Prediksi'):
             with st.spinner('Menganalisis gambar...'):
                 
@@ -69,10 +64,10 @@ def main():
                 # 2. Prediksi
                 prediction = model.predict(processed_input)
                 
-                # Probabilitas kelas 'Sakit'
+                # Probabilitas kelas 'Sakit' (Index 1)
                 unhealthy_prob = prediction[0][0] 
                 
-                # 3. Klasifikasi
+                # 3. Klasifikasi (Threshold 0.5)
                 if unhealthy_prob >= 0.5:
                     predicted_class = CLASS_NAMES[1] # Sakit
                     confidence = unhealthy_prob
