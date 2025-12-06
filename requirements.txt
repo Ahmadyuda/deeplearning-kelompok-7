@@ -1,5 +1,5 @@
 streamlit
-tensorflow==2.x.x  # Gunakan versi TensorFlow yang Anda latih modelnya
+tensorflow==2.15.0
 numpy
 Pillow
 pandas 
