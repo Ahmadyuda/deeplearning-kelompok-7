@@ -1,0 +1,7 @@
+streamlit
+tensorflow==2.x.x  # Gunakan versi TensorFlow yang Anda latih modelnya
+numpy
+Pillow
+pandas 
+matplotlib
+seaborn
